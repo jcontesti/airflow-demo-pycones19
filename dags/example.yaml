@@ -1,0 +1,16 @@
+# YAML file
+task_id:
+  incremental_task
+sql:
+  DELETE FROM daily_totals
+  WHERE day = '{{ ds }}';
+
+  INSERT INTO daily_totals
+  SELECT
+    day,
+    COUNT(*) AS total
+  FROM
+    table
+  WHERE
+    day = '{{ ds }}';
+

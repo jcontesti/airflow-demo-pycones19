@@ -1,0 +1,85 @@
+version: '3.7'
+
+services:
+
+  airflow-db:
+    image: postgres:11.3
+    container_name: airflow-db
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - ./airflow/postgres:/var/lib/postgresql/data
+    restart: always
+
+  airflow-redis:
+    image: redis:5.0.5
+    container_name: airflow-redis
+    restart: always
+
+  airflow-webserver:
+    image: puckel/docker-airflow:1.10.4
+    container_name: airflow-webserver
+    restart: always
+    depends_on:
+      - airflow-db
+      - airflow-redis
+    environment:
+      - LOAD_EX=y
+      - FERNET_KEY=-5IfgGD1ahYRcmnjZjpnPxWv3isXREEpiywO6ztShD8=
+      - EXECUTOR=Celery
+      - AIRFLOW_HOME=/usr/local/airflow # https://github.com/puckel/docker-airflow/issues/225#issuecomment-431337922
+    env_file:
+      - .env
+    volumes:
+      - ./requirements.txt:/requirements.txt
+      - ./dags:/usr/local/airflow/dags
+      - ./hooks:/usr/local/airflow/hooks
+      - ./operators:/usr/local/airflow/operators
+    ports:
+      - 127.0.0.1:8081:8080
+    command: webserver
+    healthcheck:
+        test: ["CMD-SHELL", "[ -f /usr/local/airflow/airflow-webserver.pid ]"]
+        interval: 60s
+        timeout: 30s
+        retries: 3
+
+  airflow-scheduler:
+    image: puckel/docker-airflow:1.10.4
+    container_name: airflow-scheduler
+    restart: always
+    depends_on:
+      - airflow-webserver
+    environment:
+      - LOAD_EX=y
+      - FERNET_KEY=-5IfgGD1ahYRcmnjZjpnPxWv3isXREEpiywO6ztShD8=
+      - EXECUTOR=Celery
+    env_file:
+      - .env
+    volumes:
+      - ./requirements.txt:/requirements.txt
+      - ./dags:/usr/local/airflow/dags
+      - ./hooks:/usr/local/airflow/hooks
+      - ./operators:/usr/local/airflow/operators
+    command: scheduler
+
+  airflow-worker:
+    image: puckel/docker-airflow:1.10.4
+    container_name: airflow-worker
+    restart: always
+    depends_on:
+        - airflow-scheduler
+    environment:
+      - LOAD_EX=y
+      - FERNET_KEY=o2Na6rF-25xXkrLO1u2ueZIPypQ1B5afQ5eif4JAst8=
+      - EXECUTOR=Celery
+    env_file:
+      - .env
+    volumes:
+      - ./requirements.txt:/requirements.txt
+      - ./dags:/usr/local/airflow/dags
+      - ./hooks:/usr/local/airflow/hooks
+      - ./operators:/usr/local/airflow/operators
+    command: worker
