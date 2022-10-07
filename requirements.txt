@@ -1,3 +1,3 @@
 PyYAML
-apache-airflow==1.10.14
+apache-airflow==2.4.1
 flask_bcrypt
